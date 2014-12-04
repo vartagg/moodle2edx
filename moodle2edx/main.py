@@ -32,7 +32,8 @@ class Moodle2Edx(object):
             # import gzip, tarfile
             # dir = tarfile.TarFile(fileobj=gzip.open(infn))
             infnabs = os.path.abspath(infn)
-            mdir = tempfile.mkdtemp(prefix="moodle2edx")
+            d = os.path.abspath('out/tmp')
+            mdir = tempfile.mkdtemp(prefix="moodle2edx", dir=d)
             curdir = os.path.abspath('.')
             os.chdir(mdir)
             os.system('tar xzf %s' % (infnabs))
@@ -63,10 +64,10 @@ class Moodle2Edx(object):
         mfn = 'moodle_backup.xml'	# top-level moodle backup xml
         qfn = 'questions.xml'	# moodle questions xml
     
-        qdict = self.load_questions(mdir,qfn)
+        qdict = self.load_questions(mdir, qfn)
         self.convert_static_files()
     
-        moodx = etree.parse('%s/%s' % (mdir,mfn))
+        moodx = etree.parse('%s/%s' % (mdir, mfn))
     
         info = moodx.find('.//information')
         name = info.find('.//original_course_fullname').text
@@ -444,16 +445,17 @@ class Moodle2Edx(object):
     #-----------------------------------------------------------------------------
     # load all questions
     
-    def load_questions(self, dir,qfn):
+    def load_questions(self, d, qfn):
         qdict = {}
-        moodq = etree.parse('%s/%s' % (dir,qfn))
+        s = '%s/%s' % (d, qfn)
+        moodq = etree.parse(StringIO(s))
         for question in moodq.findall('.//question'):
             id = question.get('id')
             if id is None: continue
             qdict[id] = question
             try:
                 name = question.find('.//name').text
-                question.set('filename',name.replace(' ','_').replace('.','_') + '.xml')
+                question.set('filename',name.replace(' ', '_').replace('.', '_') + '.xml')
             except Exception as err:
                 print "** Error: can't get name for question id=%s" % question.get('id')
         return qdict
@@ -506,7 +508,7 @@ class Moodle2Edx(object):
 #--------------------------------------------------------------------------
 # command line
 
-def CommandLine():
+def command_line():
     parser = optparse.OptionParser(usage="usage: %prog [options] [moodle_backup.mbz | moodle_backup_dir]",
                                    version="%prog 1.0")
     parser.add_option('-v', '--verbose', 
@@ -550,4 +552,7 @@ def CommandLine():
                      verbose=opts.verbose,
                      clean_up_html=opts.clean_up_html,
     )
-    
+
+
+if __name__ == '__main__':
+    command_line()
