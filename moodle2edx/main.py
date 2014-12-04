@@ -36,7 +36,8 @@ class Moodle2Edx(object):
             mdir = tempfile.mkdtemp(prefix="moodle2edx", dir=d)
             curdir = os.path.abspath('.')
             os.chdir(mdir)
-            os.system('tar xzf %s' % (infnabs))
+            print 'Temporary dir: {}'.format(mdir)
+            os.system('unzip {} -d {} > /dev/null 2>&1'.format(infnabs, mdir))
             os.chdir(curdir)
         else:
             mdir = infn
@@ -448,14 +449,15 @@ class Moodle2Edx(object):
     def load_questions(self, d, qfn):
         qdict = {}
         s = '%s/%s' % (d, qfn)
-        moodq = etree.parse(StringIO(s))
+        print 'Load questions from {}'.format(s)
+        moodq = etree.parse(s)
         for question in moodq.findall('.//question'):
             id = question.get('id')
             if id is None: continue
             qdict[id] = question
             try:
                 name = question.find('.//name').text
-                question.set('filename',name.replace(' ', '_').replace('.', '_') + '.xml')
+                question.set('filename', name.replace(' ', '_').replace('.', '_') + '.xml')
             except Exception as err:
                 print "** Error: can't get name for question id=%s" % question.get('id')
         return qdict

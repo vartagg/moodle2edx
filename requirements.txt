@@ -1,0 +1,6 @@
+# Ubuntu requirements:
+# sudo apt-get install libxml2-dev libxslt1-dev python-dev libxml2-utils
+
+# Python requirements:
+html2text==2014.9.25
+lxml==3.4.1
