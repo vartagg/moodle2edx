@@ -106,11 +106,15 @@ class Moodle2Edx(object):
     
         cdir = self.edxdir
         semester = self.make_url_name(semester)
-        os.popen('xmllint -format -o %s/course/%s.xml -' % (cdir, semester),'w').write(etree.tostring(cxml,pretty_print=True))
-            
+        self.write_xml(cxml, '{}/course/{}.xml'.format(cdir, semester))
+
         # the actual top-level course.xml file is a pointer XML file to the one in course/semester.xml
         open('%s/course.xml' % cdir, 'w').write('<course url_name="%s" org="%s" course="%s"/>\n' % (semester, org, number))
 
+    def write_xml(self, xml, path):
+        xml_content = etree.ElementTree(xml)
+        d = False
+        xml_content.write(path, encoding='utf-8', pretty_print=True, xml_declaration=d)
 
     def convert_static_files(self):
         '''
@@ -450,9 +454,9 @@ class Moodle2Edx(object):
             problem.append(abox.xml)
     
         pfn = url_name
-        os.popen('xmllint -format -o %s/problem/%s.xml -' % (self.edxdir, pfn),'w').write(etree.tostring(problem,pretty_print=True))
+        self.write_xml(problem, '{}/problem/{}.xml'.format(self.edxdir, pfn))
         print "        wrote %s" % pfn
-            
+
     
     #-----------------------------------------------------------------------------
     # load all questions
