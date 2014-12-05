@@ -110,9 +110,11 @@ class AnswerBox(object):
         self.xmlstr = etree.tostring(self.xml)
         
     def abox2xml(self,aboxstr):
-        if aboxstr.startswith('abox '): aboxstr = aboxstr[5:]
+        if aboxstr.startswith('abox '):
+            aboxstr = aboxstr[5:]
         s = aboxstr
-        s = s.replace(' in_check= ',' ')
+
+        s = s.replace(' in_check= ', ' ')
 
         # parse answer box arguments into dict
         abargs = self.abox_args(s)
@@ -157,8 +159,8 @@ class AnswerBox(object):
             self.copy_attrib(abargs,'inline', oi)
             
         if abtype=='multiplechoiceresponse':
-            self.require_args(['expect','options'])
-            cg = etree.SubElement(abxml,'choicegroup')
+            self.require_args(['expect', 'options'])
+            cg = etree.SubElement(abxml, 'choicegroup')
             cg.set('direction','vertical')
             optionstr, options = self.get_options(abargs)
             expect = self.stripquotes(abargs['expect'])
@@ -379,16 +381,16 @@ class AnswerBox(object):
         '''
         s = s.replace(u'\u2019',"'")
         try:
-            s = str(s)
+            s = unicode(s)
         except Exception, err:
             print "Error %s in obtaining string form of abox argument %s" % (err,s)
-            return {}
+            raise
         try:
             # abargstxt = shlex.split(s)
             abargstxt = split_args_with_quoted_strings(s)
         except Exception, err:
             print "Error %s in parsing abox argument %s" % (err,s)
-            return {}
+            raise
 
         if '' in abargstxt:
             abargstxt.remove('')

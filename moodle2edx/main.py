@@ -6,6 +6,7 @@
 #
 # python script to convert a moodle class into an edX course
 
+from __future__ import unicode_literals
 import os, sys, string, re
 import optparse
 import codecs
@@ -17,6 +18,7 @@ from path import path
 #import xml.sax.saxutils as saxutils
 import cgi
 import html2text
+import chardet
 
 html2text.IGNORE_EMPHASIS=True
 
@@ -67,9 +69,12 @@ class Moodle2Edx(object):
     
         qdict = self.load_questions(mdir, qfn)
         self.convert_static_files()
-    
+
+        parser = etree.XMLParser(encoding='utf-8')
+        etree.set_default_parser(parser)
+
         moodx = etree.parse('%s/%s' % (mdir, mfn))
-    
+
         info = moodx.find('.//information')
         name = info.find('.//original_course_fullname').text
         number = info.find('.//original_course_shortname').text
@@ -91,7 +96,8 @@ class Moodle2Edx(object):
 
         seq = None	# current sequential
         vert = None	# current vertical
-        for activity in contents.findall('.//activity'):
+        activities = contents.findall('.//activity')
+        for activity in activities:
             seq, vert = self.activity2chapter(activity, sections, cxml, seq, vert, qdict)
             
         chapter = cxml.find('chapter')
@@ -253,7 +259,9 @@ class Moodle2Edx(object):
         xml = etree.parse('%s/%s/section.xml' % (self.moodle_dir, sdir)).getroot()
         name = xml.find('name').text
         contents = xml.find('summary').text
-        contents = contents.replace('<o:p></o:p>','')
+        if contents is None:
+            contents = ''
+        contents = contents.replace('<o:p></o:p>', '')
         # if moodle author didn't bother to set name, but instead used <h2> then grab name from that
         if not name or name=='$@NULL@$':
             m = re.search('<h2(| align="left")>(.*?)</h2>', contents)
@@ -383,7 +391,9 @@ class Moodle2Edx(object):
             qfn = question.get('filename')
             url_name = self.make_url_name(qfn.replace('.xml',''))
             problem.set('url_name', url_name)
-            print "    --> question: %s (%s)" % (qname, url_name)
+
+            q_s = "    --> question: {} ({})".format(qname, url_name)
+            print q_s
             self.export_question(question, qname, url_name)
     
     #-----------------------------------------------------------------------------
@@ -420,22 +430,23 @@ class Moodle2Edx(object):
                 op = answer.find('answertext').text
                 options.append(op)
                 if float(answer.find('fraction').text)==1.0:
-                    expect = str(op)
+                    expect = unicode(op)
             optionstr = ','.join(['"%s"' % x.replace('"',"'") for x in options])
             abox = AnswerBox("type='option' expect='%s' options=%s" % (expect,optionstr))
             problem.append(abox.xml)
     
         elif qtype=='multichoice':
             options = []
-            expect = ""
+            expect = []
             for answer in question.findall('.//answer'):
                 op = answer.find('answertext').text
                 op = op.replace(u'\xa0',' ')
                 options.append(op)
-                if float(answer.find('fraction').text)==1.0:
-                    expect = str(op)
+                if float(answer.find('fraction').text) > 0:
+                    expect.append(unicode(op))
             optionstr = ','.join(['"%s"' % x.replace('"',"'") for x in options])
-            abox = AnswerBox("type='multichoice' expect='%s' options=%s" % (expect,optionstr))
+            expectstr = ','.join(['"%s"' % x.replace('"',"'") for x in expect])
+            abox = AnswerBox("type='multichoice' expect=%s options=%s" % (expectstr, optionstr))
             problem.append(abox.xml)
     
         pfn = url_name
